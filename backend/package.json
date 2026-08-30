@@ -1,0 +1,29 @@
+{
+  "name": "backend",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node dist/index.js",
+    "dev": "node dist/index.js",
+    "build": "tsc"
+  },
+  "keywords": [],
+  "author": "Student",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "@srm/shared": "^1.0.0",
+    "cors": "^2.8.6",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "playwright": "^1.62.1"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.6",
+    "@types/node": "^26.4.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^7.0.2"
+  }
+}

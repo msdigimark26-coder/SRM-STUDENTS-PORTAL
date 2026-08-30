@@ -1,0 +1,21 @@
+{
+  "name": "Bunk Adkirow - Attendance Decision Assistant",
+  "short_name": "Bunk Adkirow",
+  "description": "Your smart attendance decision assistant for SRMIST students. Track, simulate, and plan your attendance intelligently.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#090c15",
+  "theme_color": "#090c15",
+  "icons": [
+    {
+      "src": "/logo.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/logo.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
