@@ -1,9 +1,9 @@
 /**
  * Utility for making API requests.
- * Uses VITE_API_URL if defined (for production), otherwise defaults to relative path (for local dev proxy).
+ * Hardcoded to the Render URL for easy drag-and-drop deployments.
  */
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || '';
+const API_BASE_URL = import.meta.env.DEV ? '' : (import.meta.env.VITE_API_URL || 'https://srm-students-portal.onrender.com');
 
 export async function apiFetch(endpoint: string, options?: RequestInit): Promise<Response> {
   const url = `${API_BASE_URL}${endpoint}`;
