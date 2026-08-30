@@ -89,3 +89,14 @@ export interface SubjectAttendanceResult {
   healthStatus: HealthStatus;
 }
 
+export interface CaptchaResponse {
+  sessionId: string;
+  captchaImageBase64: string;
+}
+
+export interface LoginCredentials {
+  sessionId: string;
+  netId: string;
+  password: string;
+  captchaValue: string;
+}

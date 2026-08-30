@@ -9,7 +9,9 @@ import type { TabType } from './components/TopNav';
 import { BottomNav } from './components/BottomNav';
 import { SettingsModal } from './components/SettingsModal';
 import { PwaInstallPrompt } from './components/PwaInstallPrompt';
+import { LoginModal } from './components/LoginModal';
 import { apiFetch } from './utils/api';
+import type { CaptchaResponse, LoginCredentials } from '@srm/shared';
 import './App.css';
 
 const ACADEMIC_STORAGE_KEY = 'srm_academic_data';
@@ -42,7 +44,10 @@ function App() {
   const [isManualMode, setIsManualMode] = useState(false);
   const [activeTab, setActiveTab] = useState<TabType>('health');
   const [showSettings, setShowSettings] = useState(false);
-  const [targetRefresh, setTargetRefresh] = useState(0); // Trigger re-renders on target change
+  const [targetRefresh, setTargetRefresh] = useState(0); 
+  const [captchaData, setCaptchaData] = useState<CaptchaResponse | null>(null);
+  const [loginError, setLoginError] = useState<string | undefined>(undefined);
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
   const pollIntervalRef = useRef<number | null>(null);
 
   // On mount — load any previously saved manual subjects
@@ -116,12 +121,59 @@ function App() {
     setAppState('LAUNCHING');
     setStudentData(null);
     setIsManualMode(false);
+    setLoginError(undefined);
+    setCaptchaData(null);
     try {
       const res = await apiFetch('/api/connect', { method: 'POST' });
       if (!res.ok) throw new Error('API not available');
-      startPolling();
+      
+      const data = await res.json();
+      if (data.sessionId && data.captchaImageBase64) {
+        setCaptchaData(data);
+        setAppState('WAITING_FOR_LOGIN');
+      } else {
+        throw new Error('Invalid response from server');
+      }
     } catch (err) {
       setAppState('ERROR');
+    }
+  };
+
+  const handleLogin = async (credentials: LoginCredentials) => {
+    setIsLoggingIn(true);
+    setLoginError(undefined);
+    try {
+      const res = await apiFetch('/api/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(credentials)
+      });
+      
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.error || 'Login failed');
+      }
+
+      const data = await res.json();
+      
+      // Save data locally
+      try {
+        if (data.academic) {
+          localStorage.setItem(ACADEMIC_STORAGE_KEY, JSON.stringify(data.academic));
+        }
+      } catch (e) {}
+
+      setStudentData(data);
+      setIsManualMode(false);
+      setAppState('DATA_READY');
+      setActiveTab('health');
+      setCaptchaData(null);
+    } catch (err: any) {
+      setLoginError(err.message || 'Authentication failed. Please try again.');
+      // Keep state as WAITING_FOR_LOGIN so they can try again, but we might need a fresh CAPTCHA
+      // In a robust implementation we'd fetch a new CAPTCHA here. For now we let them re-click connect.
+    } finally {
+      setIsLoggingIn(false);
     }
   };
 
@@ -219,25 +271,24 @@ function App() {
           <LandingPage onStartPlanning={handleManualEdit} onConnect={handleConnect} />
         )}
 
-        {(appState === 'LAUNCHING' || appState === 'WAITING_FOR_LOGIN' || appState === 'LOGIN_FAILED' || appState === 'DISCONNECTING') && (
+        {(appState === 'LAUNCHING' || appState === 'DISCONNECTING') && (
           <div className="empty-state connecting">
             <div className="spinner"></div>
-            <h2>{appState === 'DISCONNECTING' ? 'Disconnecting...' : (appState === 'WAITING_FOR_LOGIN' || appState === 'LOGIN_FAILED') ? 'SRMIST login window is open.' : 'Connecting to SRMIST...'}</h2>
+            <h2>{appState === 'DISCONNECTING' ? 'Disconnecting...' : 'Starting secure browser session...'}</h2>
             <div style={{ marginTop: '1rem', color: 'var(--text-muted)' }}>
-              {appState === 'LAUNCHING' && <p>Starting secure browser session...</p>}
-              {(appState === 'WAITING_FOR_LOGIN' || appState === 'LOGIN_FAILED') && (
-                <>
-                  <p>Please complete your SRMIST login in the browser window.</p>
-                  <p>Your credentials are entered directly into SRMIST and are not handled by this application.</p>
-                  <p>
-                    {appState === 'LOGIN_FAILED' 
-                      ? <strong style={{ color: 'var(--status-danger)' }}>Invalid credentials detected. Please try again.</strong> 
-                      : 'Waiting for authentication...'}
-                  </p>
-                </>
-              )}
+              <p>Connecting to SRMIST...</p>
             </div>
           </div>
+        )}
+
+        {(appState === 'WAITING_FOR_LOGIN' || appState === 'LOGIN_FAILED') && captchaData && (
+          <LoginModal 
+            captchaData={captchaData}
+            onLogin={handleLogin}
+            onClose={() => setAppState('DISCONNECTED')}
+            error={loginError}
+            isLoggingIn={isLoggingIn}
+          />
         )}
 
         {appState === 'AUTHENTICATED' && (

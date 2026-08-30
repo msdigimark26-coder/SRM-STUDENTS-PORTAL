@@ -4,9 +4,22 @@ import { sessionManager } from '../services/PlaywrightSessionManager';
 const router = Router();
 
 router.post('/connect', async (req: Request, res: Response) => {
-  // Fire and forget, the frontend will poll status
-  sessionManager.connect().catch(console.error);
-  res.json({ status: 'initiated' });
+  try {
+    const captchaData = await sessionManager.getCaptcha();
+    res.json({ status: 'initiated', ...captchaData });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to initiate connection' });
+  }
+});
+
+router.post('/login', async (req: Request, res: Response) => {
+  try {
+    const credentials = req.body;
+    const data = await sessionManager.loginAndExtract(credentials);
+    res.json(data);
+  } catch (error: any) {
+    res.status(401).json({ error: error.message || 'Login failed' });
+  }
 });
 
 router.get('/connect/status', (req: Request, res: Response) => {
